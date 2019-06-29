@@ -96,7 +96,7 @@ fn step_toroidal(cells: CellsType, cells_next: &mut CellsType) {
     }
     // Edges
     for &row_i in [0, LAST_ROW].iter() {
-        for col_i in 0..LAST_COL {
+        for col_i in 0..=LAST_COL {
             let num_neighbors = get_num_neighbors_edge(cells, row_i, col_i);
             cells_next[row_i as usize][col_i as usize] = cell_next_state(cells[row_i as usize][col_i as usize], num_neighbors);
         }
