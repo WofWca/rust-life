@@ -82,7 +82,7 @@ fn step_toroidal(cells: CellsType, cells_next: &mut CellsType) {
     dbg!(get_num_neighbors_middle(cells, 1, 2));
 }
 
-fn draw(cells: &CellsType, step_num: u8) {
+fn draw(cells: &CellsType, step_num: u32) {
     println!("Step: {}", step_num);
     for row in cells.iter() {
         for cell in row.iter() {
@@ -95,7 +95,7 @@ fn draw(cells: &CellsType, step_num: u8) {
 fn main() {
     let mut cells: CellsType = [[false; NUM_COLS]; NUM_ROWS];
     let mut cells_next: CellsType = cells; // TODO can we not initialize this?
-    let mut step_num = 1;
+    let mut step_num: u32 = 1;
     // Glider
     cells[0][1] = true;
     cells[1][2] = true;
