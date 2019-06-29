@@ -79,7 +79,34 @@ fn step_toroidal(cells: CellsType, cells_next: &mut CellsType) {
         }
         return num_neighbors;
     }
-    dbg!(get_num_neighbors_middle(cells, 1, 2));
+    fn cell_next_state(curr_state: bool, num_neighbors: u8) -> bool {
+        match num_neighbors {
+            0...1 => false,
+            2 => curr_state,
+            3 => true,
+            _ => false
+        }
+    }
+    // Middle
+    for row_i in 1..=(LAST_ROW - 1) {
+        for col_i in 1..=(LAST_COL - 1) {
+            let num_neighbors = get_num_neighbors_middle(cells, row_i, col_i);
+            cells_next[row_i as usize][col_i as usize] = cell_next_state(cells[row_i as usize][col_i as usize], num_neighbors);
+        }
+    }
+    // Edges
+    for &row_i in [0, LAST_ROW].iter() {
+        for col_i in 0..LAST_COL {
+            let num_neighbors = get_num_neighbors_edge(cells, row_i, col_i);
+            cells_next[row_i as usize][col_i as usize] = cell_next_state(cells[row_i as usize][col_i as usize], num_neighbors);
+        }
+    }
+    for row_i in 1..=(LAST_ROW - 1) {
+        for &col_i in [0, LAST_COL].iter() {
+            let num_neighbors = get_num_neighbors_edge(cells, row_i, col_i);
+            cells_next[row_i as usize][col_i as usize] = cell_next_state(cells[row_i as usize][col_i as usize], num_neighbors);
+        }
+    }
 }
 
 fn draw(cells: &CellsType, step_num: u32) {
@@ -106,6 +133,7 @@ fn main() {
         draw(&cells, step_num);
         thread::sleep(time::Duration::from_millis(500));
         step_toroidal(cells, &mut cells_next);
+        std::mem::swap(&mut cells, &mut cells_next);
         step_num += 1;
     }
 }
