@@ -19,7 +19,6 @@ fn step_toroidal(cells: CellsType, cells_next: &mut CellsType) {
 
     // Used for edge cells.
     // TODO create a function for each map section so there are fewer checks?
-    dbg!(get_num_neighbors_edge(cells, 1, 0));
     fn get_num_neighbors_edge(cells: CellsType, row_i: RowInd, col_i: ColInd) -> u8 {
         fn is_edge(row_i: RowInd, col_i: ColInd) -> bool {
             row_i == 0 || row_i == LAST_ROW || col_i == 0 || col_i == LAST_COL
@@ -69,6 +68,18 @@ fn step_toroidal(cells: CellsType, cells_next: &mut CellsType) {
         }
         return num_neighbors;
     }
+    fn get_num_neighbors_middle(cells: CellsType, row_i: RowInd, col_i: ColInd) -> u8 {
+        let mut num_neighbors: u8 = 0;
+        for (neighbor_row_i, neighbor_col_i) in [
+            (row_i - 1, col_i - 1), (row_i - 1, col_i), (row_i - 1, col_i + 1),
+            (row_i, col_i - 1), (row_i, col_i + 1),
+            (row_i + 1, col_i - 1), (row_i + 1, col_i), (row_i + 1, col_i + 1),
+        ].iter() {
+            if cells[*neighbor_row_i as usize][*neighbor_col_i as usize] { num_neighbors += 1 };
+        }
+        return num_neighbors;
+    }
+    dbg!(get_num_neighbors_middle(cells, 1, 2));
 }
 
 fn draw(cells: &CellsType, step_num: u8) {
