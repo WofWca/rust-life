@@ -109,7 +109,7 @@ fn step_toroidal(cells: &CellsType, cells_next: &mut CellsType) {
     }
 }
 
-fn draw(cells: &CellsType, step_num: u32) {
+fn draw(cells: &CellsType, step_num: &u32) {
     println!("Step: {}", step_num);
     for row in cells.iter() {
         for cell in row.iter() {
@@ -130,7 +130,7 @@ fn main() {
     cells[2][1] = true;
     cells[2][2] = true;
     loop {
-        draw(&cells, step_num);
+        draw(&cells, &step_num);
         thread::sleep(time::Duration::from_millis(50));
         step_toroidal(&cells, &mut cells_next);
         std::mem::swap(&mut cells, &mut cells_next);
