@@ -9,9 +9,9 @@ type RowInd = u8;
 type ColInd = u8;
 const LAST_COL: ColInd = (NUM_COLS - 1) as ColInd;
 const LAST_ROW: RowInd = (NUM_ROWS - 1) as RowInd;
-type CellsType = [[bool; NUM_COLS]; NUM_ROWS]; // So access items with arr[row_i][col_i].
+type Cells = [[bool; NUM_COLS]; NUM_ROWS]; // So access items with arr[row_i][col_i].
 
-fn step_toroidal(cells: &CellsType, cells_next: &mut CellsType) {
+fn step_toroidal(cells: &Cells, cells_next: &mut Cells) {
     // Let's divide the field into 9 sections.
     // 1 2 2 2 2 3
     // 4 5 5 5 5 6
@@ -21,13 +21,13 @@ fn step_toroidal(cells: &CellsType, cells_next: &mut CellsType) {
 
     // Used for edge cells.
     // TODO create a function for each map section so there are fewer checks?
-    fn get_num_neighbors_edge(cells: &CellsType, row_i: RowInd, col_i: ColInd) -> u8 {
+    fn get_num_neighbors_edge(cells: &Cells, row_i: RowInd, col_i: ColInd) -> u8 {
         fn is_edge(row_i: RowInd, col_i: ColInd) -> bool {
             row_i == 0 || row_i == LAST_ROW || col_i == 0 || col_i == LAST_COL
         }
         debug_assert!(is_edge(row_i, col_i), "`get_num_neighbors_edge` must only be used for edge cells");
         let mut num_neighbors: u8 = 0;
-        fn is_neighbor_alive_toroidal(cells: &CellsType, neighbor_of: (RowInd, ColInd), shift: (i8, i8)) -> bool {
+        fn is_neighbor_alive_toroidal(cells: &Cells, neighbor_of: (RowInd, ColInd), shift: (i8, i8)) -> bool {
             debug_assert!(
                 match shift.0 { -1 | 0 | 1 => true, _ => false }
                 && match shift.1 { -1 | 0 | 1 => true, _ => false }
@@ -70,7 +70,7 @@ fn step_toroidal(cells: &CellsType, cells_next: &mut CellsType) {
         }
         return num_neighbors;
     }
-    fn get_num_neighbors_middle(cells: &CellsType, row_i: RowInd, col_i: ColInd) -> u8 {
+    fn get_num_neighbors_middle(cells: &Cells, row_i: RowInd, col_i: ColInd) -> u8 {
         let mut num_neighbors: u8 = 0;
         for (neighbor_row_i, neighbor_col_i) in [
             (row_i - 1, col_i - 1), (row_i - 1, col_i), (row_i - 1, col_i + 1),
@@ -111,7 +111,7 @@ fn step_toroidal(cells: &CellsType, cells_next: &mut CellsType) {
     }
 }
 
-fn draw(cells: &CellsType, step_num: &u32) {
+fn draw(cells: &Cells, step_num: &u32) {
     print!("{}Step: {}", termion::cursor::Goto(1,1), step_num);
     for (row_i, row) in cells.iter().enumerate() {
         print!("{}", termion::cursor::Goto(2, (row_i as u16) + 3));
@@ -147,8 +147,8 @@ fn init_board() {
 }
 
 fn main() {
-    let mut cells: CellsType = [[false; NUM_COLS]; NUM_ROWS];
-    let mut cells_next: CellsType = cells; // TODO can we not initialize this?
+    let mut cells: Cells = [[false; NUM_COLS]; NUM_ROWS];
+    let mut cells_next: Cells = cells; // TODO can we not initialize this?
     let mut step_num: u32 = 1;
     // Loafer
     cells[1][2] = true;
