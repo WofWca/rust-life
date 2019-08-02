@@ -5,3 +5,4 @@ authors = ["WofWca <wofwca@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+termion = "1.5.3"

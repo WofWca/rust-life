@@ -1,3 +1,5 @@
+extern crate termion;
+
 use std::{thread, time};
 // Width and height of the cells array
 const NUM_COLS: usize = 31;
@@ -110,14 +112,39 @@ fn step_toroidal(cells: &CellsType, cells_next: &mut CellsType) {
 }
 
 fn draw(cells: &CellsType, step_num: &u32) {
-    println!("Step: {}", step_num);
-    for row in cells.iter() {
+    print!("{}Step: {}", termion::cursor::Goto(1,1), step_num);
+    for (row_i, row) in cells.iter().enumerate() {
+        print!("{}", termion::cursor::Goto(2, (row_i as u16) + 3));
         for cell in row.iter() {
-            print!("{}", if *cell { 'x' } else { '_' });
+            print!("{}", if *cell { '█' } else { ' ' });
         }
-        print!("\n");
     }
-} 
+
+    use std::io::Write;
+    std::io::stdout().flush().unwrap();
+}
+
+fn init_board() {
+    print!("{}{}", termion::clear::All, termion::cursor::Hide); // TODO show it again when we exit (use `HideCursor` instead?)
+    fn draw_border() {
+        // The following vars describe the border, not the cells field itself
+        let first_row = 2;
+        let first_col = 1;
+        let last_row = NUM_ROWS as u16 + first_row + 1;
+        let last_col = NUM_COLS as u16 + first_col + 1;
+        print!("{}{}", termion::cursor::Goto(first_col, first_row), '╔');
+        print!("{}{}", termion::cursor::Goto(first_col + 1, first_row), "═".repeat(NUM_COLS));
+        print!("{}{}", termion::cursor::Goto(last_col, first_row), '╗');
+        for row_i in (first_row + 1)..(last_row) {
+            print!("{}{}", termion::cursor::Goto(first_col, row_i), '║');
+            print!("{}{}", termion::cursor::Goto(last_col, row_i), '║');
+        }
+        print!("{}{}", termion::cursor::Goto(first_col, last_row), '╚');
+        print!("{}{}", termion::cursor::Goto(first_col + 1, last_row), "═".repeat(NUM_COLS));
+        print!("{}{}", termion::cursor::Goto(last_col, last_row), '╝');
+    }
+    draw_border();
+}
 
 fn main() {
     let mut cells: CellsType = [[false; NUM_COLS]; NUM_ROWS];
@@ -129,6 +156,7 @@ fn main() {
     cells[2][0] = true;
     cells[2][1] = true;
     cells[2][2] = true;
+    init_board();
     loop {
         draw(&cells, &step_num);
         thread::sleep(time::Duration::from_millis(50));
