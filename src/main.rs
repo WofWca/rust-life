@@ -9,7 +9,16 @@ type RowInd = u8;
 type ColInd = u8;
 const LAST_COL: ColInd = (NUM_COLS - 1) as ColInd;
 const LAST_ROW: RowInd = (NUM_ROWS - 1) as RowInd;
-type Cells = [[bool; NUM_COLS]; NUM_ROWS]; // So access items with arr[row_i][col_i].
+
+#[derive(Copy, Clone, PartialEq)]
+enum CellState {
+    Dead,
+    Alive,
+}
+use CellState::Alive;
+use CellState::Dead;
+
+type Cells = [[CellState; NUM_COLS]; NUM_ROWS]; // So access items with arr[row_i][col_i].
 
 fn step_toroidal(cells: &Cells, cells_next: &mut Cells) {
     // Let's divide the field into 9 sections.
@@ -27,7 +36,7 @@ fn step_toroidal(cells: &Cells, cells_next: &mut Cells) {
         }
         debug_assert!(is_edge(row_i, col_i), "`get_num_neighbors_edge` must only be used for edge cells");
         let mut num_neighbors: u8 = 0;
-        fn is_neighbor_alive_toroidal(cells: &Cells, neighbor_of: (RowInd, ColInd), shift: (i8, i8)) -> bool {
+        fn get_neighbor_state_toroidal(cells: &Cells, neighbor_of: (RowInd, ColInd), shift: (i8, i8)) -> CellState {
             debug_assert!(
                 match shift.0 { -1 | 0 | 1 => true, _ => false }
                 && match shift.1 { -1 | 0 | 1 => true, _ => false }
@@ -66,7 +75,9 @@ fn step_toroidal(cells: &Cells, cells_next: &mut Cells) {
             (0, -1), (0, 1),
             (1, -1), (1, 0), (1, 1),
         ].iter() {
-            if is_neighbor_alive_toroidal(cells, (row_i, col_i), (*shift_row, *shift_col)) { num_neighbors += 1 };
+            if get_neighbor_state_toroidal(cells, (row_i, col_i), (*shift_row, *shift_col)) == Alive {
+                num_neighbors += 1
+            };
         }
         return num_neighbors;
     }
@@ -77,16 +88,16 @@ fn step_toroidal(cells: &Cells, cells_next: &mut Cells) {
             (row_i, col_i - 1), (row_i, col_i + 1),
             (row_i + 1, col_i - 1), (row_i + 1, col_i), (row_i + 1, col_i + 1),
         ].iter() {
-            if cells[*neighbor_row_i as usize][*neighbor_col_i as usize] { num_neighbors += 1 };
+            if cells[*neighbor_row_i as usize][*neighbor_col_i as usize] == Alive { num_neighbors += 1 };
         }
         return num_neighbors;
     }
-    fn cell_next_state(curr_state: bool, num_neighbors: u8) -> bool {
+    fn cell_next_state(curr_state: CellState, num_neighbors: u8) -> CellState {
         match num_neighbors {
-            0...1 => false,
+            0...1 => Dead,
             2 => curr_state,
-            3 => true,
-            _ => false
+            3 => Alive,
+            _ => Dead
         }
     }
     // Middle
@@ -116,7 +127,7 @@ fn draw(cells: &Cells, step_num: &u32) {
     for (row_i, row) in cells.iter().enumerate() {
         print!("{}", termion::cursor::Goto(2, (row_i as u16) + 3));
         for cell in row.iter() {
-            print!("{}", if *cell { '█' } else { ' ' });
+            print!("{}", if *cell == Alive { '█' } else { ' ' });
         }
     }
 
@@ -147,30 +158,30 @@ fn init_board() {
 }
 
 fn main() {
-    let mut cells: Cells = [[false; NUM_COLS]; NUM_ROWS];
+    let mut cells: Cells = [[Dead; NUM_COLS]; NUM_ROWS];
     let mut cells_next: Cells = cells; // TODO can we not initialize this?
     let mut step_num: u32 = 1;
     // Loafer
-    cells[1][2] = true;
-    cells[1][3] = true;
-    cells[1][6] = true;
-    cells[1][8] = true;
-    cells[1][9] = true;
-    cells[2][1] = true;
-    cells[2][4] = true;
-    cells[2][7] = true;
-    cells[2][8] = true;
-    cells[3][2] = true;
-    cells[3][4] = true;
-    cells[4][3] = true;
-    cells[5][9] = true;
-    cells[6][7] = true;
-    cells[6][8] = true;
-    cells[6][9] = true;
-    cells[7][6] = true;
-    cells[8][7] = true;
-    cells[9][8] = true;
-    cells[9][9] = true;
+    cells[1][2] = Alive;
+    cells[1][3] = Alive;
+    cells[1][6] = Alive;
+    cells[1][8] = Alive;
+    cells[1][9] = Alive;
+    cells[2][1] = Alive;
+    cells[2][4] = Alive;
+    cells[2][7] = Alive;
+    cells[2][8] = Alive;
+    cells[3][2] = Alive;
+    cells[3][4] = Alive;
+    cells[4][3] = Alive;
+    cells[5][9] = Alive;
+    cells[6][7] = Alive;
+    cells[6][8] = Alive;
+    cells[6][9] = Alive;
+    cells[7][6] = Alive;
+    cells[8][7] = Alive;
+    cells[9][8] = Alive;
+    cells[9][9] = Alive;
     init_board();
     loop {
         draw(&cells, &step_num);
