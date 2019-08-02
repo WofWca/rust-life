@@ -2,8 +2,8 @@ extern crate termion;
 
 use std::{thread, time};
 // Width and height of the cells array
-const NUM_COLS: usize = 31;
-const NUM_ROWS: usize = 11;
+const NUM_COLS: usize = 11;
+const NUM_ROWS: usize = 12;
 // Choose types that can fit the NUM_COLS and the NUM_ROWS accordingly.
 type RowInd = u8;
 type ColInd = u8;
@@ -150,16 +150,31 @@ fn main() {
     let mut cells: CellsType = [[false; NUM_COLS]; NUM_ROWS];
     let mut cells_next: CellsType = cells; // TODO can we not initialize this?
     let mut step_num: u32 = 1;
-    // Glider
-    cells[0][1] = true;
+    // Loafer
     cells[1][2] = true;
-    cells[2][0] = true;
+    cells[1][3] = true;
+    cells[1][6] = true;
+    cells[1][8] = true;
+    cells[1][9] = true;
     cells[2][1] = true;
-    cells[2][2] = true;
+    cells[2][4] = true;
+    cells[2][7] = true;
+    cells[2][8] = true;
+    cells[3][2] = true;
+    cells[3][4] = true;
+    cells[4][3] = true;
+    cells[5][9] = true;
+    cells[6][7] = true;
+    cells[6][8] = true;
+    cells[6][9] = true;
+    cells[7][6] = true;
+    cells[8][7] = true;
+    cells[9][8] = true;
+    cells[9][9] = true;
     init_board();
     loop {
         draw(&cells, &step_num);
-        thread::sleep(time::Duration::from_millis(50));
+        thread::sleep(time::Duration::from_millis(30));
         step_toroidal(&cells, &mut cells_next);
         std::mem::swap(&mut cells, &mut cells_next);
         step_num += 1;
