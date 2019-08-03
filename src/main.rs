@@ -1,14 +1,6 @@
 extern crate termion;
 
 use std::{thread, time};
-// Width and height of the cells array
-const NUM_COLS: usize = 11;
-const NUM_ROWS: usize = 12;
-// Choose types that can fit the NUM_COLS and the NUM_ROWS accordingly.
-type RowInd = u8;
-type ColInd = u8;
-const LAST_COL: ColInd = (NUM_COLS - 1) as ColInd;
-const LAST_ROW: RowInd = (NUM_ROWS - 1) as RowInd;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 enum CellState {
@@ -21,6 +13,23 @@ use CellState::Dead;
 type CellsRow = Vec<CellState>;
 type Cells = Vec<CellsRow>; // All rows must have the same length
 
+trait TableLike {
+    fn num_rows(&self) -> usize;
+    fn num_cols(&self) -> usize;
+    fn last_row(&self) -> usize {
+        self.num_rows() - 1
+    }
+    fn last_col(&self) -> usize {
+        self.num_cols() - 1
+    }
+}
+
+impl TableLike for Cells {
+    // TODO cache the len values?
+    fn num_rows(&self) -> usize { self.len() }
+    fn num_cols(&self) -> usize { self[0].len() }
+}
+
 fn step_toroidal(cells: &Cells, cells_next: &mut Cells) {
     // Let's divide the field into 9 sections.
     // 1 2 2 2 2 3
@@ -31,22 +40,25 @@ fn step_toroidal(cells: &Cells, cells_next: &mut Cells) {
 
     // Used for edge cells.
     // TODO create a function for each map section so there are fewer checks?
-    fn get_num_neighbors_edge(cells: &Cells, row_i: RowInd, col_i: ColInd) -> u8 {
-        fn is_edge(row_i: RowInd, col_i: ColInd) -> bool {
-            row_i == 0 || row_i == LAST_ROW || col_i == 0 || col_i == LAST_COL
-        }
-        debug_assert!(is_edge(row_i, col_i), "`get_num_neighbors_edge` must only be used for edge cells");
+    let (last_row, last_col) = (cells.last_row(), cells.last_col());
+
+    // TODO inline instead of closures?
+    let get_num_neighbors_edge = |row_i, col_i| -> u8 {
+        let is_edge = || -> bool {
+            row_i == 0 || row_i == last_row || col_i == 0 || col_i == last_col
+        };
+        debug_assert!(is_edge(), "`get_num_neighbors_edge` must only be used for edge cells");
         let mut num_neighbors: u8 = 0;
-        fn get_neighbor_state_toroidal(cells: &Cells, neighbor_of: (RowInd, ColInd), shift: (i8, i8)) -> CellState {
+        let get_neighbor_state_toroidal = |neighbor_of: (usize, usize), shift: (i8, i8)| -> CellState {
             debug_assert!(
                 match shift.0 { -1 | 0 | 1 => true, _ => false }
                 && match shift.1 { -1 | 0 | 1 => true, _ => false }
             );
             let (shift_row, shift_col) = shift;
             let (neighbor_of_row, neighbor_of_col) = neighbor_of;
-            let translated_row: RowInd = if neighbor_of_row == 0 && shift_row == -1 {
-                LAST_ROW
-            } else if neighbor_of_row == LAST_ROW && shift_row == 1 {
+            let translated_row: usize = if neighbor_of_row == 0 && shift_row == -1 {
+                last_row
+            } else if neighbor_of_row == last_row && shift_row == 1 {
                 0
             } else {
                 match shift_row {
@@ -57,9 +69,9 @@ fn step_toroidal(cells: &Cells, cells_next: &mut Cells) {
                 }
             };
             // TODO DRY
-            let translated_col: ColInd = if neighbor_of_col == 0 && shift_col == -1 {
-                LAST_COL
-            } else if neighbor_of_col == LAST_COL && shift_col == 1 {
+            let translated_col: usize = if neighbor_of_col == 0 && shift_col == -1 {
+                last_col
+            } else if neighbor_of_col == last_col && shift_col == 1 {
                 0
             } else {
                 match shift_col {
@@ -70,19 +82,19 @@ fn step_toroidal(cells: &Cells, cells_next: &mut Cells) {
                 }
             };
             return cells[translated_row as usize][translated_col as usize];
-        }
+        };
         for (shift_row, shift_col) in [
             (-1, -1), (-1, 0), (-1, 1),
             (0, -1), (0, 1),
             (1, -1), (1, 0), (1, 1),
         ].iter() {
-            if get_neighbor_state_toroidal(cells, (row_i, col_i), (*shift_row, *shift_col)) == Alive {
+            if get_neighbor_state_toroidal((row_i, col_i), (*shift_row, *shift_col)) == Alive {
                 num_neighbors += 1
             };
         }
         return num_neighbors;
-    }
-    fn get_num_neighbors_middle(cells: &Cells, row_i: RowInd, col_i: ColInd) -> u8 {
+    };
+    let get_num_neighbors_middle = |row_i, col_i| -> u8 {
         let mut num_neighbors: u8 = 0;
         for (neighbor_row_i, neighbor_col_i) in [
             (row_i - 1, col_i - 1), (row_i - 1, col_i), (row_i - 1, col_i + 1),
@@ -92,7 +104,7 @@ fn step_toroidal(cells: &Cells, cells_next: &mut Cells) {
             if cells[*neighbor_row_i as usize][*neighbor_col_i as usize] == Alive { num_neighbors += 1 };
         }
         return num_neighbors;
-    }
+    };
     fn cell_next_state(curr_state: CellState, num_neighbors: u8) -> CellState {
         match num_neighbors {
             0...1 => Dead,
@@ -102,22 +114,22 @@ fn step_toroidal(cells: &Cells, cells_next: &mut Cells) {
         }
     }
     // Middle
-    for row_i in 1..=(LAST_ROW - 1) {
-        for col_i in 1..=(LAST_COL - 1) {
-            let num_neighbors = get_num_neighbors_middle(cells, row_i, col_i);
+    for row_i in 1..=(last_row - 1) {
+        for col_i in 1..=(last_col - 1) {
+            let num_neighbors = get_num_neighbors_middle(row_i, col_i);
             cells_next[row_i as usize][col_i as usize] = cell_next_state(cells[row_i as usize][col_i as usize], num_neighbors);
         }
     }
     // Edges
-    for &row_i in [0, LAST_ROW].iter() {
-        for col_i in 0..=LAST_COL {
-            let num_neighbors = get_num_neighbors_edge(cells, row_i, col_i);
+    for &row_i in [0, last_row].iter() {
+        for col_i in 0..=last_col {
+            let num_neighbors = get_num_neighbors_edge(row_i, col_i);
             cells_next[row_i as usize][col_i as usize] = cell_next_state(cells[row_i as usize][col_i as usize], num_neighbors);
         }
     }
-    for row_i in 1..=(LAST_ROW - 1) {
-        for &col_i in [0, LAST_COL].iter() {
-            let num_neighbors = get_num_neighbors_edge(cells, row_i, col_i);
+    for row_i in 1..=(last_row - 1) {
+        for &col_i in [0, last_col].iter() {
+            let num_neighbors = get_num_neighbors_edge(row_i, col_i);
             cells_next[row_i as usize][col_i as usize] = cell_next_state(cells[row_i as usize][col_i as usize], num_neighbors);
         }
     }
@@ -136,25 +148,25 @@ fn draw(cells: &Cells, step_num: &u32) {
     std::io::stdout().flush().unwrap();
 }
 
-fn init_board() {
+fn init_board(num_rows: usize, num_cols: usize) {
     print!("{}{}", termion::clear::All, termion::cursor::Hide); // TODO show it again when we exit (use `HideCursor` instead?)
-    fn draw_border() {
+    let draw_border = || {
         // The following vars describe the border, not the cells field itself
-        let first_row = 2;
-        let first_col = 1;
-        let last_row = NUM_ROWS as u16 + first_row + 1;
-        let last_col = NUM_COLS as u16 + first_col + 1;
+        let first_row: u16 = 2;
+        let first_col: u16 = 1;
+        let last_row: u16 = num_rows as u16 + first_row + 1;
+        let last_col: u16 = num_cols as u16 + first_col + 1;
         print!("{}{}", termion::cursor::Goto(first_col, first_row), '╔');
-        print!("{}{}", termion::cursor::Goto(first_col + 1, first_row), "═".repeat(NUM_COLS));
+        print!("{}{}", termion::cursor::Goto(first_col + 1, first_row), "═".repeat(num_cols));
         print!("{}{}", termion::cursor::Goto(last_col, first_row), '╗');
         for row_i in (first_row + 1)..(last_row) {
             print!("{}{}", termion::cursor::Goto(first_col, row_i), '║');
             print!("{}{}", termion::cursor::Goto(last_col, row_i), '║');
         }
         print!("{}{}", termion::cursor::Goto(first_col, last_row), '╚');
-        print!("{}{}", termion::cursor::Goto(first_col + 1, last_row), "═".repeat(NUM_COLS));
+        print!("{}{}", termion::cursor::Goto(first_col + 1, last_row), "═".repeat(num_cols));
         print!("{}{}", termion::cursor::Goto(last_col, last_row), '╝');
-    }
+    };
     draw_border();
 }
 
@@ -243,9 +255,9 @@ fn main() {
     let file_content = std::fs::read_to_string(filename).unwrap();
     println!("Content: {}", file_content);
     let mut cells = parse_life(file_content).unwrap();
-    let mut cells_next: Cells = vec![vec![Dead; NUM_COLS]; NUM_ROWS]; // TODO can we not initialize this?
+    let mut cells_next: Cells = vec![vec![Dead; cells.num_cols()]; cells.num_rows()]; // TODO can we not initialize this?
 
-    init_board();
+    init_board(cells.num_rows(), cells.num_cols());
     loop {
         draw(&cells, &step_num);
         thread::sleep(time::Duration::from_millis(30));
