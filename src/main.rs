@@ -10,7 +10,7 @@ type ColInd = u8;
 const LAST_COL: ColInd = (NUM_COLS - 1) as ColInd;
 const LAST_ROW: RowInd = (NUM_ROWS - 1) as RowInd;
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 enum CellState {
     Dead,
     Alive,
@@ -18,7 +18,8 @@ enum CellState {
 use CellState::Alive;
 use CellState::Dead;
 
-type Cells = [[CellState; NUM_COLS]; NUM_ROWS]; // So access items with arr[row_i][col_i].
+type CellsRow = Vec<CellState>;
+type Cells = Vec<CellsRow>; // All rows must have the same length
 
 fn step_toroidal(cells: &Cells, cells_next: &mut Cells) {
     // Let's divide the field into 9 sections.
@@ -157,31 +158,93 @@ fn init_board() {
     draw_border();
 }
 
+fn parse_life(input: String) -> Result<Cells, String> {
+    // TODO different error type?
+    // TODO `input: &mut impl std::io::Read`?
+    // TODO return Result instead of panicking. Result<Option<Cells>>?
+    let mut lines = input.lines();
+    // Skip the description. TODO parse it instead of skipping?
+    let first_cells_line; // TODO get rid of this var somehow?
+    loop {
+        let line = lines.next();
+        let line = match line {
+            Some(line) => line,
+            None => return Err(String::from("Invalid input: unexpected end of the string"))
+        };
+        match line.chars().nth(0) {
+            Some(character) => {
+                if character != '!' {
+                    first_cells_line = line;
+                    break;
+                }
+            },
+            None => return Err(String::from("Invalid input: unexpected empty line"))
+        }
+    }
+    fn parse_line(line: &str) -> Result<CellsRow, String> {
+        let mut row: CellsRow = vec![];
+        // TODO err if empty?
+        for character in line.chars() {
+            match character {
+                '.' => row.push(Dead),
+                'O' => row.push(Alive),
+                _ => return Err(format!("Invalid cell value. Expected '.' or 'O', got '{}'", character)),
+            }
+        }
+        Ok(row)
+    }
+    let row = match parse_line(first_cells_line) {
+        Ok(cells) => cells,
+        Err(err) => return Err(err),
+    };
+    let mut longest_row_len = row.len();
+    let mut cells: Cells = vec![row];
+    for line in lines {
+        // If it's an empty line
+        if let None = line.chars().next() {
+            break;
+        }
+
+        let row = match parse_line(line) {
+            Ok(cells) => cells,
+            Err(err) => return Err(err),
+        };
+        if longest_row_len < row.len() { longest_row_len = row.len() }
+        cells.push(row);
+    }
+    // Pad short rows
+    for row in &mut cells {
+        row.resize(longest_row_len, Dead);
+    }
+    // TODO allocate the required amount right away
+    Ok(cells)
+}
+#[test]
+fn all_rows_of_same_len() {
+    let test_input = String::from(
+        "!Name: Test Structure\n\
+        !\n\
+        .O\n\
+        O.\n\
+        O..");
+    println!("{}", test_input);
+    let cells = parse_life(test_input).unwrap();
+    dbg!(&cells);
+    let first_row_len = cells.len();
+    for row in cells {
+        assert_eq!(row.len(), first_row_len);
+    }
+}
+
 fn main() {
-    let mut cells: Cells = [[Dead; NUM_COLS]; NUM_ROWS];
-    let mut cells_next: Cells = cells; // TODO can we not initialize this?
     let mut step_num: u32 = 1;
-    // Loafer
-    cells[1][2] = Alive;
-    cells[1][3] = Alive;
-    cells[1][6] = Alive;
-    cells[1][8] = Alive;
-    cells[1][9] = Alive;
-    cells[2][1] = Alive;
-    cells[2][4] = Alive;
-    cells[2][7] = Alive;
-    cells[2][8] = Alive;
-    cells[3][2] = Alive;
-    cells[3][4] = Alive;
-    cells[4][3] = Alive;
-    cells[5][9] = Alive;
-    cells[6][7] = Alive;
-    cells[6][8] = Alive;
-    cells[6][9] = Alive;
-    cells[7][6] = Alive;
-    cells[8][7] = Alive;
-    cells[9][8] = Alive;
-    cells[9][9] = Alive;
+    let filename = std::env::args().nth(1).unwrap();
+    println!("File: {}", filename);
+    let file_content = std::fs::read_to_string(filename).unwrap();
+    println!("Content: {}", file_content);
+    let mut cells = parse_life(file_content).unwrap();
+    let mut cells_next: Cells = vec![vec![Dead; NUM_COLS]; NUM_ROWS]; // TODO can we not initialize this?
+
     init_board();
     loop {
         draw(&cells, &step_num);
