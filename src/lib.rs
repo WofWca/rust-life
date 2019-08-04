@@ -126,7 +126,7 @@ pub fn step_toroidal(cells: &Cells, cells_next: &mut Cells) {
     }
 }
 
-pub fn draw(cells: &Cells, step_num: &u32) {
+pub fn update_term(cells: &Cells, step_num: &u32) {
     print!("{}Step: {}", termion::cursor::Goto(1,1), step_num);
     for (row_i, row) in cells.iter().enumerate() {
         print!("{}", termion::cursor::Goto(2, (row_i as u16) + 3));
@@ -139,7 +139,8 @@ pub fn draw(cells: &Cells, step_num: &u32) {
     std::io::stdout().flush().unwrap();
 }
 
-pub fn init_board(num_rows: usize, num_cols: usize) {
+pub fn init_term(cells: &Cells) {
+    let (num_rows, num_cols) = (cells.num_rows(), cells.num_cols());
     print!("{}{}", termion::clear::All, termion::cursor::Hide); // TODO show it again when we exit (use `HideCursor` instead?)
     let draw_border = || {
         // The following vars describe the border, not the cells field itself
