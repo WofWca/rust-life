@@ -171,8 +171,7 @@ fn parse_life(input: String) -> Result<Cells, String> {
     // Skip the description. TODO parse it instead of skipping?
     let first_cells_line; // TODO get rid of this var somehow?
     loop {
-        let line = lines.next();
-        let line = match line {
+        let line = match lines.next() {
             Some(line) => line,
             None => return Err(String::from("Invalid input: unexpected end of the string"))
         };
@@ -186,7 +185,7 @@ fn parse_life(input: String) -> Result<Cells, String> {
             None => return Err(String::from("Invalid input: unexpected empty line"))
         }
     }
-    fn parse_line(line: &str) -> Result<CellsRow, String> {
+    fn parse_row(line: &str) -> Result<CellsRow, String> {
         let mut row: CellsRow = vec![];
         // TODO err if empty?
         for character in line.chars() {
@@ -198,10 +197,7 @@ fn parse_life(input: String) -> Result<Cells, String> {
         }
         Ok(row)
     }
-    let row = match parse_line(first_cells_line) {
-        Ok(cells) => cells,
-        Err(err) => return Err(err),
-    };
+    let row = parse_row(first_cells_line)?;
     let mut longest_row_len = row.len();
     let mut cells: Cells = vec![row];
     for line in lines {
@@ -210,10 +206,7 @@ fn parse_life(input: String) -> Result<Cells, String> {
             break;
         }
 
-        let row = match parse_line(line) {
-            Ok(cells) => cells,
-            Err(err) => return Err(err),
-        };
+        let row = parse_row(line)?;
         if longest_row_len < row.len() { longest_row_len = row.len() }
         cells.push(row);
     }
