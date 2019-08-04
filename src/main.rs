@@ -1,4 +1,6 @@
-use life::{step_toroidal, parse_life, update_term, init_term};
+use life::game::step_toroidal;
+use life::graphics::{update_term, init_term};
+use life::parse_life;
 
 use std::{thread, time};
 
