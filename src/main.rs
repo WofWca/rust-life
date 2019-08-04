@@ -31,18 +31,21 @@ impl TableLike for Cells {
 }
 
 fn step_toroidal(cells: &Cells, cells_next: &mut Cells) {
-    // Let's divide the field into 9 sections.
-    // 1 2 2 2 2 3
-    // 4 5 5 5 5 6
-    // 4 5 5 5 5 6
-    // 4 5 5 5 5 6
-    // 7 8 8 8 8 9
-
-    // Used for edge cells.
-    // TODO create a function for each map section so there are fewer checks?
+    // TODO don't panic if the board is one cells wide/high
     let (last_row, last_col) = (cells.last_row(), cells.last_col());
-
     // TODO inline instead of closures?
+    let get_num_neighbors_middle = |row_i, col_i| -> u8 {
+        let mut num_neighbors: u8 = 0;
+        for (neighbor_row_i, neighbor_col_i) in [
+            (row_i - 1, col_i - 1), (row_i - 1, col_i), (row_i - 1, col_i + 1),
+            (row_i, col_i - 1), (row_i, col_i + 1),
+            (row_i + 1, col_i - 1), (row_i + 1, col_i), (row_i + 1, col_i + 1),
+        ].iter() {
+            if cells[*neighbor_row_i as usize][*neighbor_col_i as usize] == Alive { num_neighbors += 1 };
+        }
+        return num_neighbors;
+    };
+    // TODO create a function for each map section so there are fewer checks?
     let get_num_neighbors_edge = |row_i, col_i| -> u8 {
         let is_edge = || -> bool {
             row_i == 0 || row_i == last_row || col_i == 0 || col_i == last_col
@@ -94,17 +97,6 @@ fn step_toroidal(cells: &Cells, cells_next: &mut Cells) {
         }
         return num_neighbors;
     };
-    let get_num_neighbors_middle = |row_i, col_i| -> u8 {
-        let mut num_neighbors: u8 = 0;
-        for (neighbor_row_i, neighbor_col_i) in [
-            (row_i - 1, col_i - 1), (row_i - 1, col_i), (row_i - 1, col_i + 1),
-            (row_i, col_i - 1), (row_i, col_i + 1),
-            (row_i + 1, col_i - 1), (row_i + 1, col_i), (row_i + 1, col_i + 1),
-        ].iter() {
-            if cells[*neighbor_row_i as usize][*neighbor_col_i as usize] == Alive { num_neighbors += 1 };
-        }
-        return num_neighbors;
-    };
     fn cell_next_state(curr_state: CellState, num_neighbors: u8) -> CellState {
         match num_neighbors {
             0...1 => Dead,
@@ -113,6 +105,7 @@ fn step_toroidal(cells: &Cells, cells_next: &mut Cells) {
             _ => Dead
         }
     }
+
     // Middle
     for row_i in 1..=(last_row - 1) {
         for col_i in 1..=(last_col - 1) {
