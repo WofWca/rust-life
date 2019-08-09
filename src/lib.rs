@@ -2,9 +2,10 @@ extern crate termion;
 
 pub mod game {
     #[derive(Copy, Clone, PartialEq, Debug)]
+    #[repr(u8)]
     pub enum CellState {
-        Dead,
-        Alive,
+        Dead = 0,
+        Alive = 1,
     }
     use CellState::Alive;
     use CellState::Dead;
@@ -40,7 +41,7 @@ pub mod game {
                 (row_i, col_i - 1), (row_i, col_i + 1),
                 (row_i + 1, col_i - 1), (row_i + 1, col_i), (row_i + 1, col_i + 1),
             ].iter() {
-                if cells[*neighbor_row_i as usize][*neighbor_col_i as usize] == Alive { num_neighbors += 1 };
+                num_neighbors += cells[*neighbor_row_i as usize][*neighbor_col_i as usize] as u8;
             }
             return num_neighbors;
         };
@@ -90,9 +91,7 @@ pub mod game {
                 (0, -1), (0, 1),
                 (1, -1), (1, 0), (1, 1),
             ].iter() {
-                if get_neighbor_state_toroidal((row_i, col_i), (*shift_row, *shift_col)) == Alive {
-                    num_neighbors += 1
-                };
+                num_neighbors += get_neighbor_state_toroidal((row_i, col_i), (*shift_row, *shift_col)) as u8;
             }
             return num_neighbors;
         };
